@@ -23,12 +23,30 @@ sdk.get("/image-api.js", async (c) => {
   }
 });
 
+// Cache for the found example path
+let cachedExamplePath = null;
+
 // Serve the example HTML page
 sdk.get("/example", async (c) => {
   try {
     // Get the absolute path to the project root
     const projectRoot = process.cwd();
-    console.log('Current working directory:', projectRoot);
+    
+    // If we already found the path in a previous request, use it
+    if (cachedExamplePath) {
+      try {
+        const exampleContent = readFileSync(cachedExamplePath, 'utf-8');
+        console.log(`✅ Serving from cached path: ${cachedExamplePath}`);
+        c.header("Content-Type", "text/html; charset=utf-8");
+        c.header("X-Example-Path", cachedExamplePath);
+        return c.html(exampleContent);
+      } catch (e) {
+        console.log(`❌ Cached path no longer valid: ${cachedExamplePath}`);
+        cachedExamplePath = null; // Reset cache if file was moved/deleted
+      }
+    }
+    
+    console.log('🔍 Searching for example.html in:', projectRoot);
     
     // Try to find the static directory
     const possibleStaticDirs = [
@@ -51,7 +69,9 @@ sdk.get("/example", async (c) => {
       try {
         exampleContent = readFileSync(examplePath, 'utf-8');
         foundPath = examplePath;
-        console.log('✅ Found example at:', examplePath);
+        cachedExamplePath = foundPath; // Cache the found path
+        console.log(`✅ Found and cached example at: ${foundPath}`);
+        console.log('📌 Next requests will use this path directly');
         break;
       } catch (err) {
         console.log(`❌ Not found: ${examplePath}`);
@@ -61,8 +81,8 @@ sdk.get("/example", async (c) => {
     if (!exampleContent) {
       // List directory contents for debugging
       try {
-        console.log('Current directory contents:', require('fs').readdirSync(projectRoot));
-        console.log('Parent directory contents:', require('fs').readdirSync(join(projectRoot, '..')));
+        console.log('📂 Current directory contents:', require('fs').readdirSync(projectRoot));
+        console.log('📁 Parent directory contents:', require('fs').readdirSync(join(projectRoot, '..')));
       } catch (e) {
         console.error('Error listing directories:', e);
       }
@@ -71,7 +91,8 @@ sdk.get("/example", async (c) => {
     }
     
     c.header("Content-Type", "text/html; charset=utf-8");
-    c.header("X-Example-Path", foundPath); // For debugging
+    c.header("X-Example-Path", foundPath);
+    c.header("X-Cached-Path", "false");
     return c.html(exampleContent);
   } catch (error) {
     console.error("❌ Error serving example:", error);
