@@ -2,6 +2,8 @@
 
 Una API de imágenes simple construida con Hono.js que permite subir, descargar y gestionar imágenes almacenadas en AWS S3. Incluye un SDK fácil de usar para integración en aplicaciones web.
 
+Creado con ❤️ por [Blissito](https://github.com/blissito) para el cumpleaños de Chavy. 👵🏼
+
 ## 🚀 Características
 
 - Subida de imágenes a AWS S3
@@ -20,12 +22,14 @@ Una API de imágenes simple construida con Hono.js que permite subir, descargar 
 ## 🔧 Instalación
 
 1. Clona el repositorio:
+
    ```bash
    git clone https://github.com/tu-usuario/hono-image-api.git
    cd hono-image-api
    ```
 
 2. Instala las dependencias:
+
    ```bash
    npm install
    ```
@@ -55,16 +59,16 @@ El servidor estará disponible en `http://localhost:3000`
 <script>
   // Configura la URL base de tu API
   ImageAPI.init({
-    baseURL: 'https://tu-dominio.com/api'
+    baseURL: "https://tu-dominio.com/api",
   });
 
   // Subir una imagen
   async function uploadImage(file) {
     try {
       const result = await ImageAPI.uploadImage(file);
-      console.log('Imagen subida:', result);
+      console.log("Imagen subida:", result);
     } catch (error) {
-      console.error('Error:', error.message);
+      console.error("Error:", error.message);
     }
   }
 </script>
