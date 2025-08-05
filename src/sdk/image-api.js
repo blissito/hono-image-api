@@ -8,8 +8,16 @@
  */
 
 window.ImageAPI = {
-  // URL base de la API
-  baseURL: 'https://hono-chavy.fly.dev',
+  // URL base de la API - se detecta automáticamente el entorno
+  baseURL: (() => {
+    console.log('🔍 DEBUG: window.location.hostname =', window.location.hostname);
+    console.log('🔍 DEBUG: window.location.href =', window.location.href);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    console.log('🔍 DEBUG: isLocal =', isLocal);
+    const url = isLocal ? 'http://localhost:3000' : 'https://hono-chavy.fly.dev';
+    console.log('🔍 DEBUG: Selected baseURL =', url);
+    return url;
+  })(),
 
   /**
    * 📤 Subir una imagen
@@ -149,6 +157,51 @@ window.ImageAPI = {
         success: true,
         downloadUrl: data.download_url,
         expiresIn: data.expires_in
+      };
+
+    } catch (error) {
+      console.error('💥 Error:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  /**
+   * 🗑️ Borrar una imagen
+   * @param {string} key - La clave de la imagen a borrar
+   * @returns {Promise} - Promesa que resuelve con el resultado de la eliminación
+   */
+  async deleteImage(key) {
+    try {
+      if (!key) {
+        throw new Error('❌ Se requiere la clave de la imagen para borrar');
+      }
+
+      console.log('🗑️ Borrando imagen:', key);
+      const response = await fetch(`${this.baseURL}/api/uploads/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          key: key
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '❌ Error borrando la imagen');
+      }
+
+      const data = await response.json();
+      console.log('✅ Imagen borrada exitosamente');
+      
+      return {
+        success: true,
+        message: data.message || '🗑️ ¡Imagen borrada correctamente!',
+        key: data.key
       };
 
     } catch (error) {

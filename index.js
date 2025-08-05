@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { corsMiddleware } from "./src/utils/cors.js";
@@ -20,8 +21,7 @@ app.route("/api/gallery", gallery);
 app.route("/api/images", gallery); // Gallery module also handles /api/images/:uuid/:filename
 app.route("/sdk", sdk); // SDK endpoints
 
-// Handle OPTIONS for CORS
-app.options("*", (c) => c.text("", 204));
+
 
 // Start server
 const port = parseInt(process.env.PORT || "3000");

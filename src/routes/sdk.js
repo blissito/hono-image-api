@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const sdk = new Hono();
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Serve the SDK JavaScript file
 sdk.get("/image-api.js", async (c) => {
@@ -47,6 +48,8 @@ sdk.get("/example", async (c) => {
     }
     
     console.log('🔍 Searching for example.html in:', projectRoot);
+    console.log('🔍 Current directory contents:', readdirSync(projectRoot));
+    console.log('🔍 __dirname:', __dirname);
     
     // Try to find the static directory
     const possibleStaticDirs = [
@@ -57,7 +60,12 @@ sdk.get("/example", async (c) => {
       '../static',
       '../../static',
       join(__dirname, '../../static'),
-      join(__dirname, '../../../static')
+      join(__dirname, '../../../static'),
+      // Try absolute paths that might work in Fly.io
+      '/app/static',
+      '/app/src/static',
+      '/app/dist/static',
+      '/app/build/static'
     ];
     
     let exampleContent;
@@ -81,8 +89,8 @@ sdk.get("/example", async (c) => {
     if (!exampleContent) {
       // List directory contents for debugging
       try {
-        console.log('📂 Current directory contents:', require('fs').readdirSync(projectRoot));
-        console.log('📁 Parent directory contents:', require('fs').readdirSync(join(projectRoot, '..')));
+        console.log('📂 Current directory contents:', readdirSync(projectRoot));
+        console.log('📁 Parent directory contents:', readdirSync(join(projectRoot, '..')));
       } catch (e) {
         console.error('Error listing directories:', e);
       }

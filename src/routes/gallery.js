@@ -8,34 +8,52 @@ const gallery = new Hono();
 // Get gallery - list all images with presigned URLs
 gallery.get("/", async (c) => {
   try {
+    // Debug: Check environment variables
+    console.log("🔍 DEBUG Environment:");
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log(
+      "AWS_ACCESS_KEY_ID:",
+      process.env.AWS_ACCESS_KEY_ID ? "SET" : "MISSING"
+    );
+    console.log(
+      "AWS_SECRET_ACCESS_KEY:",
+      process.env.AWS_SECRET_ACCESS_KEY ? "SET" : "MISSING"
+    );
+    console.log("AWS_S3_BUCKET:", process.env.AWS_S3_BUCKET_NAME);
+
     const command = new ListObjectsV2Command({
       Bucket: BUCKET_NAME,
       Prefix: "chavy/uploads/",
     });
 
     const response = await s3Client.send(command);
-    
+
     if (!response.Contents || response.Contents.length === 0) {
       return c.json({ images: [] });
     }
 
     // Generate image URLs using our proxy endpoint
-    const images = response.Contents
-      .filter(obj => obj.Key && obj.Key.match(/\.(jpg|jpeg|png|gif|webp)$/i))
-      .map((obj) => {
-        // Extract the path after "chavy/uploads/"
-        const pathParts = obj.Key.split('chavy/uploads/')[1];
-        const proxyUrl = `https://hono-chavy.fly.dev/api/images/${pathParts}`;
-        
-        return {
-          key: obj.Key,
-          url: proxyUrl,
-          directUrl: `${PUBLIC_ENDPOINT}/${obj.Key}`,
-          size: obj.Size,
-          lastModified: obj.LastModified,
-          filename: obj.Key.split('/').pop(),
-        };
-      });
+    const images = response.Contents.filter(
+      (obj) => obj.Key && obj.Key.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ).map((obj) => {
+      // Extract the path after "chavy/uploads/"
+      const pathParts = obj.Key.split("chavy/uploads/")[1];
+      // Detect environment and use appropriate base URL
+      const baseUrl =
+        process.env.NODE_ENV === "development"
+          ? "http://localhost:3000"
+          : "https://hono-chavy.fly.dev";
+      const proxyUrl = `${baseUrl}/api/images/${pathParts}`;
+
+      return {
+        key: obj.Key,
+        url: proxyUrl,
+        directUrl: `${PUBLIC_ENDPOINT}/${obj.Key}`,
+        size: obj.Size,
+        lastModified: obj.LastModified,
+        filename: obj.Key.split("/").pop(),
+      };
+    });
 
     return c.json({
       images,
@@ -52,13 +70,13 @@ gallery.get("/:uuid/:filename", async (c) => {
   try {
     const uuid = c.req.param("uuid");
     const filename = c.req.param("filename");
-    
+
     console.log("Serving image uuid:", uuid, "filename:", filename);
-    
+
     if (!uuid || !filename) {
       return c.json({ error: "UUID and filename are required" }, 400);
     }
-    
+
     const key = `chavy/uploads/${uuid}/${filename}`;
     console.log("S3 key:", key);
 

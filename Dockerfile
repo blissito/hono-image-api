@@ -8,9 +8,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production
 
-# Copy application code
+# Copy application code and static files
 COPY index.js ./
 COPY src/ ./src/
+COPY static/ ./static/
 
 # Expose port
 EXPOSE 3000

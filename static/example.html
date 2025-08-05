@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 Image API SDK - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .image-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .image-name {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            word-break: break-word;
+            opacity: 0.9;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            width: 100%;
+        }
+        
+        .loading {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 2rem 0;
+            display: none;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #4CAF50;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+        .notification.info {
+            background-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div id="notification" class="notification"></div>
+    
+    <div class="container">
+        <h1>🌟 Image API SDK</h1>
+        <p class="subtitle">Demo interactivo del SDK de imágenes</p>
+        
+        <div class="controls">
+            <button id="uploadBtn">📄 Subir Imagen</button>
+            <button onclick="loadGallery()">🔄 Recargar Galería</button>
+        </div>
+        
+        <div id="loading" class="loading">🔄 Cargando...</div>
+        <div id="gallery" class="gallery"></div>
+    </div>
+
+
+
+    <!-- Incluir nuestro SDK -->
+    <script src="/sdk/image-api.js"></script>
+    
+    <script>
+        // App state
+        const elements = {
+            loading: () => document.getElementById('loading'),
+            gallery: () => document.getElementById('gallery'),
+            uploadBtn: () => document.getElementById('uploadBtn')
+        };
+
+        // Upload image handler
+        async function handleUpload() {
+            const input = ImageAPI.createFileInput(async (file) => {
+                const btn = elements.uploadBtn();
+                btn.disabled = true;
+                btn.textContent = '📤 Subiendo...';
+                
+                try {
+                    const result = await ImageAPI.uploadImage(file);
+                    if (result.success) {
+                        ImageAPI.showMessage(result.message, 'success');
+                        setTimeout(loadGallery, 1000);
+                    } else {
+                        ImageAPI.showMessage(result.error, 'error');
+                    }
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '📄 Subir Imagen';
+                }
+            });
+            input.click();
+        }
+        
+        // Load and display gallery
+        async function loadGallery() {
+            const loading = elements.loading();
+            const gallery = elements.gallery();
+            
+            loading.style.display = 'block';
+            gallery.innerHTML = '';
+            
+            try {
+                const result = await ImageAPI.getGallery();
+                loading.style.display = 'none';
+                
+                if (result.success && result.count > 0) {
+                    result.images.forEach(createImageCard);
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showErrorState(error.message);
+            }
+        }
+        
+        // Create image card
+        function createImageCard(image) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            card.innerHTML = `
+                <img src="${image.url}" alt="${image.filename}" loading="lazy">
+                <div class="image-name">${image.filename}</div>
+                <button class="delete-btn">🗑️ Borrar</button>
+            `;
+            
+            card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDelete(e.target, image.key);
+            });
+            
+            elements.gallery().appendChild(card);
+        }
+        
+        // Handle image deletion
+        async function handleDelete(button, key) {
+            if (!confirm('¿Estás seguro de que quieres borrar esta imagen?')) return;
+            
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Borrando...';
+            
+            try {
+                const result = await ImageAPI.deleteImage(key);
+                if (result.success) {
+                    ImageAPI.showMessage(result.message || '✅ Imagen borrada', 'success');
+                    loadGallery();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                ImageAPI.showMessage(error.message || 'Error al borrar', 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+        
+        // Show empty state
+        function showEmptyState() {
+            elements.gallery().innerHTML = `
+                <div class="empty-state">
+                    <h3>🤷‍♀️ No hay imágenes</h3>
+                    <p>¡Sube tu primera imagen!</p>
+                </div>
+            `;
+        }
+        
+        // Show error state
+        function showErrorState(message) {
+            elements.gallery().innerHTML = `
+                <div class="empty-state">
+                    <h3>❌ Error</h3>
+                    <p>${message}</p>
+                    <button onclick="loadGallery()">🔄 Reintentar</button>
+                </div>
+            `;
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            elements.uploadBtn().addEventListener('click', handleUpload);
+            loadGallery();
+        });
+    </script>
+</body>
+</html>

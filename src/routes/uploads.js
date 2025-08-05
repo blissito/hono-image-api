@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { randomUUID } from "crypto";
@@ -78,6 +78,38 @@ uploads.post("/download-url", async (c) => {
   } catch (error) {
     console.error("Error generating download URL:", error);
     return c.json({ error: "Failed to generate download URL" }, 500);
+  }
+});
+
+// Delete an image from S3
+uploads.delete("/delete", async (c) => {
+  try {
+    const { key } = await c.req.json();
+
+    if (!key) {
+      return c.json({ error: "Missing required parameter: key" }, 400);
+    }
+
+    // Verify key starts with our prefix for security
+    if (!key.startsWith("chavy/uploads/")) {
+      return c.json({ error: "Invalid key - can only delete files in chavy/uploads/" }, 403);
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+
+    return c.json({
+      success: true,
+      message: "Image deleted successfully",
+      key: key,
+    });
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    return c.json({ error: "Failed to delete image" }, 500);
   }
 });
 
