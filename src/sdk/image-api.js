@@ -31,6 +31,11 @@ window.ImageAPI = {
       if (!file.type.startsWith('image/')) {
         throw new Error('❌ Solo se pueden subir imágenes (jpg, png, gif, etc.)');
       }
+      
+      // Rechazar archivos AVIF
+      if (file.name.toLowerCase().endsWith('.avif') || file.type === 'image/avif') {
+        throw new Error('❌ No se permiten archivos AVIF. Por favor, usa otro formato como JPG o PNG.');
+      }
 
       // Obtener URL de subida
       console.log('🔄 Generando URL de subida...');
