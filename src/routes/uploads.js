@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 import { s3Client, BUCKET_NAME, PUBLIC_ENDPOINT } from "../config/s3.js";
 
 const uploads = new Hono();
@@ -20,7 +20,7 @@ uploads.post("/presigned-url", async (c) => {
     }
 
     // Generate unique key
-    const key = `chavy/uploads/${randomUUID()}/${filename}`;
+    const key = `chavy/uploads/${nanoid(4)}_${filename}`;
 
     // Create presigned POST data
     const presignedPost = await createPresignedPost(s3Client, {
@@ -92,7 +92,10 @@ uploads.delete("/delete", async (c) => {
 
     // Verify key starts with our prefix for security
     if (!key.startsWith("chavy/uploads/")) {
-      return c.json({ error: "Invalid key - can only delete files in chavy/uploads/" }, 403);
+      return c.json(
+        { error: "Invalid key - can only delete files in chavy/uploads/" },
+        403
+      );
     }
 
     const command = new DeleteObjectCommand({

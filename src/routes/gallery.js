@@ -32,32 +32,42 @@ gallery.get("/", async (c) => {
       return c.json({ images: [] });
     }
 
-    // Generate image URLs using our proxy endpoint
-    const images = response.Contents.filter(
-      (obj) => obj.Key && obj.Key.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-    ).map((obj) => {
-      // Extract the path after "chavy/uploads/"
-      const pathParts = obj.Key.split("chavy/uploads/")[1];
-      // Detect environment and use appropriate base URL
-      const baseUrl =
-        process.env.NODE_ENV === "development"
-          ? "http://localhost:3000"
-          : "https://hono-chavy.fly.dev";
-      const proxyUrl = `${baseUrl}/api/images/${pathParts}`;
+    // Generate presigned URLs for each image (1 hour expiration)
+    const images = await Promise.all(
+      response.Contents.filter(
+        (obj) => obj.Key && obj.Key.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      ).map(async (obj) => {
+        try {
+          // Generate presigned URL for this image
+          const command = new GetObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: obj.Key,
+          });
 
-      return {
-        key: obj.Key,
-        url: proxyUrl,
-        directUrl: `${PUBLIC_ENDPOINT}/${obj.Key}`,
-        size: obj.Size,
-        lastModified: obj.LastModified,
-        filename: obj.Key.split("/").pop(),
-      };
-    });
+          const presignedUrl = await getSignedUrl(s3Client, command, {
+            expiresIn: 3600, // 1 hour
+          });
+
+          return {
+            key: obj.Key,
+            url: presignedUrl,  // Presigned URL directa
+            size: obj.Size,
+            lastModified: obj.LastModified,
+            filename: obj.Key.split("/").pop(),
+          };
+        } catch (error) {
+          console.error(`Error generating presigned URL for ${obj.Key}:`, error);
+          return null; // Filtraremos estos después
+        }
+      })
+    );
+
+    // Filter out any failed URLs
+    const validImages = images.filter(img => img !== null);
 
     return c.json({
-      images,
-      count: images.length,
+      images: validImages,
+      count: validImages.length,
     });
   } catch (error) {
     console.error("Error fetching gallery:", error);
@@ -65,36 +75,6 @@ gallery.get("/", async (c) => {
   }
 });
 
-// Serve images (redirect to S3)
-gallery.get("/:uuid/:filename", async (c) => {
-  try {
-    const uuid = c.req.param("uuid");
-    const filename = c.req.param("filename");
-
-    console.log("Serving image uuid:", uuid, "filename:", filename);
-
-    if (!uuid || !filename) {
-      return c.json({ error: "UUID and filename are required" }, 400);
-    }
-
-    const key = `chavy/uploads/${uuid}/${filename}`;
-    console.log("S3 key:", key);
-
-    // Generate signed URL and redirect
-    const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-    });
-
-    const signedUrl = await getSignedUrl(s3Client, command, {
-      expiresIn: 3600,
-    });
-
-    return c.redirect(signedUrl, 302);
-  } catch (error) {
-    console.error("Error serving image:", error);
-    return c.json({ error: "Image not found" }, 404);
-  }
-});
+// Ya no necesitamos el proxy de imágenes porque devolvemos URLs firmadas directamente
 
 export default gallery;

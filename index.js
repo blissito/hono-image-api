@@ -18,7 +18,6 @@ app.get("/", healthCheck);
 // Mount route modules
 app.route("/api/uploads", uploads);
 app.route("/api/gallery", gallery);
-app.route("/api/images", gallery); // Gallery module also handles /api/images/:uuid/:filename
 app.route("/sdk", sdk); // SDK endpoints
 
 
