@@ -4,6 +4,7 @@ import { corsMiddleware } from "./src/utils/cors.js";
 import { healthCheck } from "./src/utils/health.js";
 import uploads from "./src/routes/uploads.js";
 import gallery from "./src/routes/gallery.js";
+import sdk from "./src/routes/sdk.js";
 
 const app = new Hono();
 
@@ -17,6 +18,7 @@ app.get("/", healthCheck);
 app.route("/api/uploads", uploads);
 app.route("/api/gallery", gallery);
 app.route("/api/images", gallery); // Gallery module also handles /api/images/:uuid/:filename
+app.route("/sdk", sdk); // SDK endpoints
 
 // Handle OPTIONS for CORS
 app.options("*", (c) => c.text("", 204));
