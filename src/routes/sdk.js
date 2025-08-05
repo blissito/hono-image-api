@@ -26,35 +26,55 @@ sdk.get("/image-api.js", async (c) => {
 // Serve the example HTML page
 sdk.get("/example", async (c) => {
   try {
-    // Try multiple possible paths for the example file
-    const possiblePaths = [
-      join(process.cwd(), 'static', 'example.html'),  // Production path
-      join(__dirname, '../../static/example.html'),   // Local development path
-      join(__dirname, '../../../static/example.html') // Alternative path
+    // Get the absolute path to the project root
+    const projectRoot = process.cwd();
+    console.log('Current working directory:', projectRoot);
+    
+    // Try to find the static directory
+    const possibleStaticDirs = [
+      'static',
+      'public/static',
+      'dist/static',
+      'build/static',
+      '../static',
+      '../../static',
+      join(__dirname, '../../static'),
+      join(__dirname, '../../../static')
     ];
     
     let exampleContent;
-    let lastError;
+    let foundPath = '';
     
-    for (const examplePath of possiblePaths) {
+    // Try each possible static directory
+    for (const staticDir of possibleStaticDirs) {
+      const examplePath = join(projectRoot, staticDir, 'example.html');
       try {
         exampleContent = readFileSync(examplePath, 'utf-8');
-        console.log('Serving example from:', examplePath);
+        foundPath = examplePath;
+        console.log('✅ Found example at:', examplePath);
         break;
       } catch (err) {
-        lastError = err;
-        console.log(`Path not found: ${examplePath}`);
+        console.log(`❌ Not found: ${examplePath}`);
       }
     }
     
     if (!exampleContent) {
-      throw lastError || new Error('Could not find example.html in any of the expected locations');
+      // List directory contents for debugging
+      try {
+        console.log('Current directory contents:', require('fs').readdirSync(projectRoot));
+        console.log('Parent directory contents:', require('fs').readdirSync(join(projectRoot, '..')));
+      } catch (e) {
+        console.error('Error listing directories:', e);
+      }
+      
+      throw new Error(`Could not find example.html in any of the expected locations. Current dir: ${projectRoot}`);
     }
     
     c.header("Content-Type", "text/html; charset=utf-8");
+    c.header("X-Example-Path", foundPath); // For debugging
     return c.html(exampleContent);
   } catch (error) {
-    console.error("Error serving example:", error);
+    console.error("❌ Error serving example:", error);
     return c.text(`Error loading example page: ${error.message}`, 500);
   }
 });
